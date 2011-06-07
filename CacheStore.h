@@ -10,11 +10,18 @@
 #import "CacheStoreImageSupport.h"
 
 typedef enum {
-    CacheStoreStrategyLastAccessed = 0,
-    CacheStoreStrategyLastAdded,
-    CacheStoreStrategyRemainingTTL,
-    CacheStoreStrategyAccessCount,
-} CacheStoreStrategy;
+    CacheStoreCleanupStrategyLastAccessed = 0,
+    CacheStoreCleanupStrategyLastAdded,
+    CacheStoreCleanupStrategyRemainingTTL,
+    CacheStoreCleanupStrategyAccessCount,
+} CacheStoreCleanupStrategy;
+
+typedef enum {
+    CacheStorePersistStrategyExplicit = 0,
+    CacheStorePersistStrategyAlways,
+    CacheStorePersistStrategyOnFirstLevelClean,
+    CacheStorePersistStrategyOnDealloc,
+} CacheStorePersistStrategy;
 
 typedef enum {
     SecondLevelCacheStoreTempFolder = 0,
@@ -29,7 +36,8 @@ typedef enum {
 
 }
 
-@property(nonatomic) CacheStoreStrategy strategy;
+@property(nonatomic) CacheStoreCleanupStrategy cleanupStrategy;
+@property(nonatomic) CacheStorePersistStrategy persistStrategy;
 @property(nonatomic) SecondLevelCacheStore store;
 @property(nonatomic) NSUInteger firstLevelLimit, secondLevelLimit;
 @property(nonatomic) NSTimeInterval defaultTimeToLife;

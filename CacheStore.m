@@ -15,7 +15,7 @@
 
 @implementation CacheStore
 
-@synthesize strategy;
+@synthesize cleanupStrategy, persistStrategy;
 @synthesize store;
 @synthesize firstLevelLimit, secondLevelLimit;
 @synthesize defaultTimeToLife;
@@ -41,19 +41,8 @@
     return self;
 }
 
-- (id)initWithFirstLevelLimit:(NSUInteger)aFirstLevelLimit secondLevelLimit:(NSUInteger)aSecondLevelLimit andStrategy:(CacheStoreStrategy)aStrategy {
-    if ((self = [self initWithFirstLevelLimit:aFirstLevelLimit secondLevelLimit:aSecondLevelLimit])) {
-        self.strategy = aStrategy;
-    }
-    return self;
-}
-
 + (CacheStore *)cacheStoreWithFirstLevelLimit:(NSUInteger)firstLevelLimit secondLevelLimit:(NSUInteger)secondLevelLimit {
     return [[[CacheStore alloc] initWithFirstLevelLimit:firstLevelLimit secondLevelLimit:secondLevelLimit] autorelease];
-}
-
-+ (CacheStore *)cacheStoreWithFirstLevelLimit:(NSUInteger)firstLevelLimit secondLevelLimit:(NSUInteger)secondLevelLimit andStrategy:(CacheStoreStrategy)strategy {
-    return [[[CacheStore alloc] initWithFirstLevelLimit:firstLevelLimit secondLevelLimit:secondLevelLimit andStrategy:strategy] autorelease];
 }
 
 # pragma mark -
@@ -67,14 +56,13 @@
 }
 
 - (NSUInteger)secondLevelCount {
-    // TODO: return number of files
-    return 0;
+    return [self files].count;
 }
 
 # pragma mark -
 
 - (NSSet *)files {
-    // TODO: return all files
+    // TODO: return all cache files
     return nil;
 }
 
