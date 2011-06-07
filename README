@@ -1,0 +1,7 @@
+CacheStore is a managed two level caching system. 
+
+You can choose from different caching strategies and define limits on the first and second level cache.
+
+first level: in memory cache (internally using a NSDictionary)
+
+second level: disk store (using files in temp folder)
