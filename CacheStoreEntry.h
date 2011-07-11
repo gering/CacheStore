@@ -9,8 +9,7 @@
 #import <Foundation/Foundation.h>
 
 
-@interface CacheStoreEntry : NSObject<NSCoding> {  
-}
+@interface CacheStoreEntry : NSObject<NSCoding>
 
 @property(retain, nonatomic) id key;
 @property(retain, nonatomic) id value;

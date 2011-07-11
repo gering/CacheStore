@@ -17,10 +17,11 @@
 @synthesize accessCount;
 
 - (id)initWithKey:(id)aKey value:(id)aValue timeToLife:(NSTimeInterval)ttl {
-    [self init];
-    self.key = aKey;
-    self.value = aValue;
-    self.timeToLife = ttl;
+    if (([self init])) {
+        self.key = aKey;
+        self.value = aValue;
+        self.timeToLife = ttl;
+    }
     return self;
 }
 

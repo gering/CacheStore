@@ -18,27 +18,27 @@ typedef enum {
 
 typedef enum {
     CacheStorePersistStrategyExplicit = 0,
-    CacheStorePersistStrategyAlways,
+    CacheStorePersistStrategyOnFirstLevelInsert,
     CacheStorePersistStrategyOnFirstLevelClean,
     CacheStorePersistStrategyOnDealloc,
 } CacheStorePersistStrategy;
 
 typedef enum {
-    SecondLevelCacheStoreTempFolder = 0,
-    SecondLevelCacheStoreUserDefaults,
-} SecondLevelCacheStore;
+    CacheStoreSecondLevelStoreCacheFolder = 0,
+    CacheStoreSecondLevelStoreUserDefaults,
+}  CacheStoreSecondLevelStore;
 
 
 @interface CacheStore : NSObject {  
 
 @private
-    NSMutableDictionary *cache;
+    NSCache *cache;
 
 }
 
 @property(nonatomic) CacheStoreCleanupStrategy cleanupStrategy;
 @property(nonatomic) CacheStorePersistStrategy persistStrategy;
-@property(nonatomic) SecondLevelCacheStore store;
+@property(nonatomic) CacheStoreSecondLevelStore store;
 @property(nonatomic) NSUInteger firstLevelLimit, secondLevelLimit;
 @property(nonatomic) NSTimeInterval defaultTimeToLife;
 @property(readonly, getter = isPersisting, nonatomic) BOOL persisting;
