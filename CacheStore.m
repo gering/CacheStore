@@ -26,22 +26,24 @@
 - (id)init {
     if ((self = [super init])) {
         self.firstLevelLimit = 1000;
+        self.secondLevelLimit = 0;
         self.defaultTimeToLife = 3600;    // one hour
         cache = [[NSCache alloc] init];
     }
     return self;
 }
 
-- (id)initWithFirstLevelLimit:(NSUInteger)aFirstLevelLimit secondLevelLimit:(NSUInteger)aSecondLevelLimit {
+- (id)initWithFirstLevelLimit:(NSUInteger)aFirstLevelLimit secondLevelLimit:(NSUInteger)aSecondLevelLimit defaultTimeToLife:(NSTimeInterval)ttl {
     if ((self = [self init])) {
         self.firstLevelLimit = aFirstLevelLimit;
         self.secondLevelLimit = aSecondLevelLimit;
+        self.defaultTimeToLife = ttl;
     }
     return self;
 }
 
-+ (CacheStore *)cacheStoreWithFirstLevelLimit:(NSUInteger)firstLevelLimit secondLevelLimit:(NSUInteger)secondLevelLimit {
-    return [[[CacheStore alloc] initWithFirstLevelLimit:firstLevelLimit secondLevelLimit:secondLevelLimit] autorelease];
++ (CacheStore *)cacheStoreWithFirstLevelLimit:(NSUInteger)firstLevelLimit secondLevelLimit:(NSUInteger)secondLevelLimit defaultTimeToLife:(NSTimeInterval)ttl {
+    return [[[CacheStore alloc] initWithFirstLevelLimit:firstLevelLimit secondLevelLimit:secondLevelLimit defaultTimeToLife:ttl] autorelease];
 }
 
 # pragma mark -
@@ -94,10 +96,8 @@
 
 - (CacheStoreEntry *)entryFromFirstLevel:(id)key {
     CacheStoreEntry *entry = [cache objectForKey:key];
-    if (![entry isValid] && cleanupStrategy == CacheStoreCleanupStrategyRemainingTTL) {
-        NSLog(@">>>> entry %@ is not valid anymore -> removing", entry);
-        [self removeFromFirstLevel:key];
-        [self removeFromSecondLevel:key];
+    if (entry && ![entry isValid]) {
+        [self removeObjectForKey:key];
         entry = nil;
     }
     return entry;
@@ -105,34 +105,31 @@
 
 - (CacheStoreEntry *)entryFromSecondLevel:(id)key {
     CacheStoreEntry *entry = [NSKeyedUnarchiver unarchiveObjectWithFile:[self fileForKey:key]];
-    if (![entry.key isEqual:key]) {
+    if (entry && ![entry.key isEqual:key]) {
         entry = nil;
-        NSLog(@">>>> key '%@' mismatch in second level cache", key);
+        NSLog(@"WARNING: key '%@' mismatch in second level cache", key);
     }
     return entry;
 }
 
 - (void)putEntryToFirstLevel:(CacheStoreEntry *)entry {
     if (entry) {
-        if ([entry isValid] || cleanupStrategy != CacheStoreCleanupStrategyRemainingTTL) {
+        if ([entry isValid]) {
             [cache setObject:entry forKey:entry.key]; 
-        } else {
-            NSLog(@">>>> entry %@ is not valid anymore", entry);
         }
     } else {
-        NSLog(@">>>> not adding null entry");
+        NSLog(@"WARNING: not adding null entry to cache");
     }
 }
 
 - (void)putEntryToSecondLevel:(CacheStoreEntry *)entry {
     switch (store) {
-        case CacheStoreSecondLevelStoreCacheFolder: {
+        case CacheStoreSecondLevelTargetCacheFolder: {
             NSString *file = [self fileForKey:entry.key];
-            NSLog(@">>>> persisting to second level cache %@", file);
             [NSKeyedArchiver archiveRootObject:entry toFile:file];
             break;
         }
-        case CacheStoreSecondLevelStoreUserDefaults: {
+        case CacheStoreSecondLevelTargetUserDefaults: {
             NSLog(@"not supported yet");
             break;
         }
@@ -144,18 +141,13 @@
 #pragma mark - using the cache
 
 - (id)objectForKey:(id)key {
-    
-    // try first level
-    CacheStoreEntry *entry = [self entryFromFirstLevel:key];
-    
-    if (!entry) {
-        // try second level
+    CacheStoreEntry *entry = [self entryFromFirstLevel:key];    // try first level
+    if (!entry) {   // try second level?
         entry = [self entryFromSecondLevel:key];
         if (entry) {
             [self putEntryToFirstLevel:entry];
         }
     }
-
     return entry.value;
 }
 

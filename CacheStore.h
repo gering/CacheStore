@@ -24,29 +24,27 @@ typedef enum {
 } CacheStorePersistStrategy;
 
 typedef enum {
-    CacheStoreSecondLevelStoreCacheFolder = 0,
-    CacheStoreSecondLevelStoreUserDefaults,
-}  CacheStoreSecondLevelStore;
+    CacheStoreSecondLevelTargetCacheFolder = 0,
+    CacheStoreSecondLevelTargetUserDefaults,
+}  CacheStoreSecondLevelTarget;
 
 
 @interface CacheStore : NSObject {  
-
 @private
     NSCache *cache;
-
 }
 
 @property(nonatomic) CacheStoreCleanupStrategy cleanupStrategy;
 @property(nonatomic) CacheStorePersistStrategy persistStrategy;
-@property(nonatomic) CacheStoreSecondLevelStore store;
+@property(nonatomic) CacheStoreSecondLevelTarget store;
 @property(nonatomic) NSUInteger firstLevelLimit, secondLevelLimit;
 @property(nonatomic) NSTimeInterval defaultTimeToLife;
 @property(readonly, getter = isPersisting, nonatomic) BOOL persisting;
 @property(readonly, nonatomic) NSUInteger firstLevelCount, secondLevelCount;
 
-- (id)initWithFirstLevelLimit:(NSUInteger)firstLevelLimit secondLevelLimit:(NSUInteger)secondLevelLimit;
+- (id)initWithFirstLevelLimit:(NSUInteger)firstLevelLimit secondLevelLimit:(NSUInteger)secondLevelLimit defaultTimeToLife:(NSTimeInterval)ttl;
 
-+ (CacheStore *)cacheStoreWithFirstLevelLimit:(NSUInteger)firstLevelLimit secondLevelLimit:(NSUInteger)secondLevelLimit;
++ (CacheStore *)cacheStoreWithFirstLevelLimit:(NSUInteger)firstLevelLimit secondLevelLimit:(NSUInteger)secondLevelLimit defaultTimeToLife:(NSTimeInterval)ttl;
 
 // return the stored cached files from the second level cache
 - (NSSet *)files;

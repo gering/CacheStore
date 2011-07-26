@@ -17,10 +17,11 @@
 @synthesize accessCount;
 
 - (id)initWithKey:(id)aKey value:(id)aValue timeToLife:(NSTimeInterval)ttl {
-    if (([self init])) {
+    if ((self = [super init])) {
         self.key = aKey;
         self.value = aValue;
         self.timeToLife = ttl;
+        self.added = [NSDate date];
     }
     return self;
 }
@@ -45,7 +46,7 @@
 }
 
 - (NSTimeInterval)passed {
-    return [[NSDate  date] timeIntervalSinceDate:added];
+    return [[NSDate date] timeIntervalSinceDate:added];
 }
 
 - (NSTimeInterval)rest {
@@ -56,5 +57,10 @@
     return [self rest] > 0;
 }
 
+- (void)dealloc {
+    [key release];
+    [value release];
+    [super dealloc];
+}
 
 @end
