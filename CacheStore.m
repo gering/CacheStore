@@ -126,7 +126,7 @@
             break;
         }
         case CacheStoreSecondLevelTargetUserDefaults: {
-            NSLog(@"not supported yet");
+            NSLog(@"CacheStoreSecondLevelTargetUserDefaults not supported yet");
             break;
         }
         default:
