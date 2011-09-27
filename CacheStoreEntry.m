@@ -60,6 +60,8 @@
 - (void)dealloc {
     [key release];
     [value release];
+    [added release];
+    [lastAccess release];
     [super dealloc];
 }
 

@@ -96,10 +96,6 @@
 
 - (CacheStoreEntry *)entryFromFirstLevel:(id)key {
     CacheStoreEntry *entry = [cache objectForKey:key];
-    if (entry && ![entry isValid]) {
-        [self removeObjectForKey:key];
-        entry = nil;
-    }
     return entry;
 }
 
@@ -114,7 +110,7 @@
 
 - (void)putEntryToFirstLevel:(CacheStoreEntry *)entry {
     if (entry) {
-        if ([entry isValid]) {
+        if ([entry isValid] && firstLevelLimit > 0) {
             [cache setObject:entry forKey:entry.key]; 
         }
     } else {
@@ -144,9 +140,13 @@
     CacheStoreEntry *entry = [self entryFromFirstLevel:key];    // try first level
     if (!entry) {   // try second level?
         entry = [self entryFromSecondLevel:key];
-        if (entry) {
+        if (entry && [entry isValid]) {
             [self putEntryToFirstLevel:entry];
         }
+    }
+    if (entry && ![entry isValid]) {
+        [self removeObjectForKey:key];
+        entry = nil;
     }
     return entry.value;
 }
