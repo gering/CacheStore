@@ -120,12 +120,14 @@
 
 - (void)putEntryToSecondLevel:(CacheStoreEntry *)entry {
     switch (store) {
-        case CacheStoreSecondLevelTargetCacheFolder: {
+        case CacheStoreSecondLevelTargetCacheFolder: 
+        {
             NSString *file = [self fileForKey:entry.key];
             [NSKeyedArchiver archiveRootObject:entry toFile:file];
             break;
         }
-        case CacheStoreSecondLevelTargetUserDefaults: {
+        case CacheStoreSecondLevelTargetUserDefaults: 
+        {
             NSLog(@"CacheStoreSecondLevelTargetUserDefaults not supported yet");
             break;
         }
