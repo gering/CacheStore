@@ -1,19 +1,30 @@
 //
 //  CacheStore.m
-//  ProviderCheck
+//  CacheStore
 //
 //  Created by Robert Gering on 07.06.11.
 //  Copyright 2011 RGSD. All rights reserved.
 //
 
 // TODO: persist on dealloc if enabled
+// TODO: respond and cleanup on limits
 
 
 #import "CacheStore.h"
 #import "CacheStoreEntry.h"
+#import "CacheableUIImage.h"
+
+
+@interface CacheStore() 
+
+@property(nonatomic, retain) NSCache *cache;
+
+@end
 
 @implementation CacheStore
 
+@synthesize cache;
+@synthesize name;
 @synthesize cleanupStrategy, persistStrategy;
 @synthesize store;
 @synthesize firstLevelLimit, secondLevelLimit;
@@ -28,22 +39,19 @@
         self.firstLevelLimit = 1000;
         self.secondLevelLimit = 0;
         self.defaultTimeToLife = 3600;    // one hour
-        cache = [[NSCache alloc] init];
+        self.cache = [[[NSCache alloc] init] autorelease];
     }
     return self;
 }
 
-- (id)initWithFirstLevelLimit:(NSUInteger)aFirstLevelLimit secondLevelLimit:(NSUInteger)aSecondLevelLimit defaultTimeToLife:(NSTimeInterval)ttl {
+- (id)initWithName:(NSString *)aName firstLevelLimit:(NSUInteger)aFirstLevelLimit secondLevelLimit:(NSUInteger)aSecondLevelLimit defaultTimeToLife:(NSTimeInterval)ttl {
     if ((self = [self init])) {
         self.firstLevelLimit = aFirstLevelLimit;
         self.secondLevelLimit = aSecondLevelLimit;
         self.defaultTimeToLife = ttl;
+        self.name = aName;
     }
     return self;
-}
-
-+ (CacheStore *)cacheStoreWithFirstLevelLimit:(NSUInteger)firstLevelLimit secondLevelLimit:(NSUInteger)secondLevelLimit defaultTimeToLife:(NSTimeInterval)ttl {
-    return [[[CacheStore alloc] initWithFirstLevelLimit:firstLevelLimit secondLevelLimit:secondLevelLimit defaultTimeToLife:ttl] autorelease];
 }
 
 # pragma mark -
@@ -57,27 +65,73 @@
 }
 
 - (NSUInteger)secondLevelCount {
-    return [self files].count;
+    return [self secondLevelFiles].count;
 }
 
 # pragma mark -
 
-- (NSSet *)files {
-    // TODO: return all cache files
-    return nil;
-}
-
-#pragma mark - level based cache access
-
-- (NSString *)cacheDirectory {
++ (NSString *)cacheDirectory {
     NSArray *cachePaths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
     NSString *cacheDirectory = [cachePaths objectAtIndex:0];
     return cacheDirectory;
 }
 
 - (NSString *)fileForKey:(id)key {
-    return [NSString stringWithFormat:@"%@/%i.cache", [self cacheDirectory], [key hash]];
+    return [NSString stringWithFormat:@"%@/%@_%i.cache", [CacheStore cacheDirectory], [self name], [key hash]];
 }
+
++ (NSArray *)allCachedFiles {
+    NSError *error = nil;
+    NSArray *items = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:[CacheStore cacheDirectory] error:&error];
+    
+    if (error) {
+        NSLog(@"Error: %@", [error localizedDescription]);
+        return nil;
+    }
+    
+    NSMutableArray *cachedFiles = [NSMutableArray array];
+    for (NSString *item in items) {
+        if ([item hasSuffix:@".cache"]) {
+            [cachedFiles addObject:item];
+        }
+    }
+    return cachedFiles;
+}
+
+- (NSArray *)secondLevelFiles {
+    NSMutableArray *secondLevelFiles = [NSMutableArray array];
+    NSString *searchString = [NSString stringWithFormat:@"/%@_", [self name]];
+    for (NSString *item in [CacheStore allCachedFiles]) {
+        if ([item rangeOfString:searchString].location != NSNotFound) {
+            [secondLevelFiles addObject:item];
+        }
+    }
+    return secondLevelFiles;
+}
+
++ (void)clearFiles:(NSArray *)files {
+    NSLog(@"clearing %i files", files.count);
+    for (NSString *item in files) {
+        NSLog(@"deleting %@", item);
+        NSError *error = nil;
+        NSString *file = [NSString stringWithFormat:@"%@/%@", [CacheStore cacheDirectory], item];
+        BOOL success = [[NSFileManager defaultManager] removeItemAtPath:file error:&error];
+        if (!success) {
+            NSLog(@"Error: %@", [error localizedDescription]);
+            return;
+        }
+    }    
+}
+
+- (void)clearSecondLevelCache {
+    [CacheStore clearFiles:[self secondLevelFiles]];
+}
+
++ (void)clearAllCachedFiles {
+    [CacheStore clearFiles:[CacheStore allCachedFiles]];
+}
+
+#pragma mark - level based cache access
 
 - (void)removeFromFirstLevel:(id)key {
     [cache removeObjectForKey:key];
@@ -163,6 +217,12 @@
 }
 
 - (void)setObject:(id)object forKey:(id)key withTimeToLife:(NSTimeInterval)ttl {
+    
+    // swap object with CacheableUIImage?
+    if ([object isKindOfClass:[UIImage class]]) {
+        object = [[[CacheableUIImage alloc] initWithData:UIImagePNGRepresentation(object)] autorelease];
+    }
+    
     CacheStoreEntry *entry = [[CacheStoreEntry alloc] initWithKey:key value:object timeToLife:ttl];
     
     [self putEntryToFirstLevel:entry];
@@ -176,6 +236,7 @@
 
 - (void)dealloc {
     [cache release];
+    [name release];
     [super dealloc];
 }
 

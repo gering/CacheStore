@@ -1,6 +1,6 @@
 //
 //  CacheStoreEntry.m
-//  ProviderCheck
+//  CacheStore
 //
 //  Created by Robert Gering on 07.06.11.
 //  Copyright 2011 RGSD. All rights reserved.
