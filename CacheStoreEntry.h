@@ -11,12 +11,12 @@
 
 @interface CacheStoreEntry : NSObject<NSCoding>
 
-@property(retain, nonatomic) id key;
-@property(retain, nonatomic) id value;
+@property(nonatomic, strong) id key;
+@property(nonatomic, strong) id value;
 
-@property(assign) NSTimeInterval timeToLife;
-@property(retain) NSDate *added, *lastAccess;
-@property(assign) long accessCount;
+@property(nonatomic) NSTimeInterval timeToLife;
+@property(nonatomic, strong) NSDate *added, *lastAccess;
+@property(nonatomic) long accessCount;
 
 - (id)initWithKey:(id)key value:(id)value timeToLife:(NSTimeInterval)ttl;
 

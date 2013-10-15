@@ -7,19 +7,31 @@
 //
 
 #import "CacheStoreEntry.h"
+#import "CacheableUIImage.h"
+
+#if ! __has_feature(objc_arc)
+#error This file must be compiled with ARC. Use -fobjc-arc flag (or convert project to ARC).
+#endif
+
+static NSString * const kNSCodingKeyKey = @"key";
+static NSString * const kNSCodingKeyValue = @"value";
+static NSString * const kNSCodingKeyTimeToLife = @"timeToLife";
+static NSString * const kNSCodingKeyAdded = @"added";
+static NSString * const kNSCodingKeyLastAccess = @"lastAccess";
 
 
 @implementation CacheStoreEntry
 
-@synthesize key, value;
-@synthesize timeToLife;
-@synthesize added, lastAccess;
-@synthesize accessCount;
-
-- (id)initWithKey:(id)aKey value:(id)aValue timeToLife:(NSTimeInterval)ttl {
+- (id)initWithKey:(id)key value:(id)value timeToLife:(NSTimeInterval)ttl {
     if ((self = [super init])) {
-        self.key = aKey;
-        self.value = aValue;
+
+        // swap object with CacheableUIImage?
+        if ([value isKindOfClass:[UIImage class]]) {
+            value = [[CacheableUIImage alloc] initWithData:UIImagePNGRepresentation(value)];
+        }
+        
+        self.key = key;
+        self.value = value;
         self.timeToLife = ttl;
         self.added = [NSDate date];
     }
@@ -28,41 +40,33 @@
 
 - (id)initWithCoder:(NSCoder *)decoder {
     if ((self = [super init])) {
-        self.key = [decoder decodeObjectForKey:@"key"];
-        self.value = [decoder decodeObjectForKey:@"value"];
-        self.timeToLife = [decoder decodeDoubleForKey:@"timeToLife"];
-        self.added = [decoder decodeObjectForKey:@"added"];
-        self.lastAccess = [decoder decodeObjectForKey:@"lastAccess"];
+        self.key = [decoder decodeObjectForKey:kNSCodingKeyKey];
+        self.value = [decoder decodeObjectForKey:kNSCodingKeyValue];
+        self.timeToLife = [decoder decodeDoubleForKey:kNSCodingKeyTimeToLife];
+        self.added = [decoder decodeObjectForKey:kNSCodingKeyAdded];
+        self.lastAccess = [decoder decodeObjectForKey:kNSCodingKeyLastAccess];
     }
     return self;
 }
 
 - (void)encodeWithCoder:(NSCoder *)encoder {
-    [encoder encodeObject:self.key forKey:@"key"];
-    [encoder encodeObject:self.value forKey:@"value"];
-    [encoder encodeDouble:self.timeToLife forKey:@"timeToLife"];
-    [encoder encodeObject:self.added forKey:@"added"];
-    [encoder encodeObject:self.lastAccess forKey:@"lastAccess"];
+    [encoder encodeObject:self.key forKey:kNSCodingKeyKey];
+    [encoder encodeObject:self.value forKey:kNSCodingKeyValue];
+    [encoder encodeDouble:self.timeToLife forKey:kNSCodingKeyTimeToLife];
+    [encoder encodeObject:self.added forKey:kNSCodingKeyAdded];
+    [encoder encodeObject:self.lastAccess forKey:kNSCodingKeyLastAccess];
 }
 
 - (NSTimeInterval)passed {
-    return [[NSDate date] timeIntervalSinceDate:added];
+    return [[NSDate date] timeIntervalSinceDate:self.added];
 }
 
 - (NSTimeInterval)rest {
-    return timeToLife - [self passed];
+    return self.timeToLife - self.passed;
 }
 
 - (BOOL)isValid {
-    return [self rest] > 0;
-}
-
-- (void)dealloc {
-    [key release];
-    [value release];
-    [added release];
-    [lastAccess release];
-    [super dealloc];
+    return self.rest > 0;
 }
 
 @end

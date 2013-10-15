@@ -8,48 +8,58 @@
 
 #import <Foundation/Foundation.h>
 
-typedef enum {
-    CacheStoreCleanupStrategyLastAccessed = 0,
+typedef NS_ENUM(NSUInteger, CacheStoreCleanupStrategy) {
+    CacheStoreCleanupStrategyLastAccessed,
     CacheStoreCleanupStrategyLastAdded,
     CacheStoreCleanupStrategyRemainingTTL,
     CacheStoreCleanupStrategyAccessCount,
-} CacheStoreCleanupStrategy;
+};
 
-typedef enum {
-    CacheStorePersistStrategyExplicit = 0,
+typedef NS_ENUM(NSUInteger, CacheStorePersistStrategy) {
+    CacheStorePersistStrategyExplicit,
     CacheStorePersistStrategyOnFirstLevelInsert,
     CacheStorePersistStrategyOnFirstLevelClean,
     CacheStorePersistStrategyOnDealloc,
-} CacheStorePersistStrategy;
+};
 
-typedef enum {
-    CacheStoreSecondLevelTargetCacheFolder = 0,
+typedef NS_ENUM(NSUInteger, CacheStoreSecondLevelTarget) {
+    CacheStoreSecondLevelTargetCacheFolder,
     CacheStoreSecondLevelTargetUserDefaults,
-}  CacheStoreSecondLevelTarget;
+};
 
 
 @interface CacheStore : NSObject
 
-@property(nonatomic, retain) NSString *name;
+@property(nonatomic, copy) NSString *name;
 @property(nonatomic) CacheStoreCleanupStrategy cleanupStrategy;
 @property(nonatomic) CacheStorePersistStrategy persistStrategy;
-@property(nonatomic) CacheStoreSecondLevelTarget store;
+@property(nonatomic) CacheStoreSecondLevelTarget secondLevelTarget;
 @property(nonatomic) NSUInteger firstLevelLimit, secondLevelLimit;
 @property(nonatomic) NSTimeInterval defaultTimeToLife;
 @property(nonatomic, readonly, getter = isPersisting) BOOL persisting;
 @property(nonatomic, readonly) NSUInteger firstLevelCount, secondLevelCount;
 
+- (id)initWithName:(NSString *)name;
+
 - (id)initWithName:(NSString *)name firstLevelLimit:(NSUInteger)firstLevelLimit secondLevelLimit:(NSUInteger)secondLevelLimit defaultTimeToLife:(NSTimeInterval)ttl;
 
+- (id)initWithName:(NSString *)name firstLevelLimit:(NSUInteger)firstLevelLimit secondLevelLimit:(NSUInteger)secondLevelLimit defaultTimeToLife:(NSTimeInterval)ttl cleanupStrategy:(CacheStoreCleanupStrategy)cleanupStrategy persistStrategy:(CacheStorePersistStrategy)persistStrategy secondLevelTarget:(CacheStoreSecondLevelTarget)secondLevelTarget;
+
+
++ (NSString *)cacheDirectory;
+
+- (void)clearCache;
+- (void)clearFistLevelCache;
 - (void)clearSecondLevelCache;
+
 + (void)clearAllCachedFiles;
 
-// return the stored cached files from the second level cache
+/// @Description return the stored cached files from the second level cache
 - (NSArray *)secondLevelFiles; 
 
 - (id)objectForKey:(id)key;
 - (void)removeObjectForKey:(id)key;
-- (void)setObject:(id)object forKey:(id)key;
-- (void)setObject:(id)object forKey:(id)key withTimeToLife:(NSTimeInterval)ttl;
+- (void)setObject:(id)object forKey:(id <NSCopying>)key;
+- (void)setObject:(id)object forKey:(id <NSCopying>)key withTimeToLife:(NSTimeInterval)ttl;
 
 @end
