@@ -9,17 +9,15 @@
 #import <Foundation/Foundation.h>
 
 typedef NS_ENUM(NSUInteger, CacheStoreCleanupStrategy) {
-    CacheStoreCleanupStrategyLastAccessed,
-    CacheStoreCleanupStrategyLastAdded,
-    CacheStoreCleanupStrategyRemainingTTL,
-    CacheStoreCleanupStrategyAccessCount,
+    CacheStoreCleanupStrategyLastAccessed,  // clean least accessed entries
+    CacheStoreCleanupStrategyLastAdded,     // clean oldest entries
+    CacheStoreCleanupStrategyRemainingTTL,  // clean entries with short ttl
+    CacheStoreCleanupStrategyAccessCount,   // clean entries with smallest access count
 };
 
 typedef NS_ENUM(NSUInteger, CacheStorePersistStrategy) {
-    CacheStorePersistStrategyExplicit,
-    CacheStorePersistStrategyOnFirstLevelInsert,
+    CacheStorePersistStrategyOnFirstLevelInsertAndClean,
     CacheStorePersistStrategyOnFirstLevelClean,
-    CacheStorePersistStrategyOnDealloc,
 };
 
 typedef NS_ENUM(NSUInteger, CacheStoreSecondLevelTarget) {
@@ -30,7 +28,7 @@ typedef NS_ENUM(NSUInteger, CacheStoreSecondLevelTarget) {
 
 @interface CacheStore : NSObject
 
-@property(nonatomic, copy) NSString *name;
+@property(nonatomic, strong, readonly) NSString *name;
 @property(nonatomic) CacheStoreCleanupStrategy cleanupStrategy;
 @property(nonatomic) CacheStorePersistStrategy persistStrategy;
 @property(nonatomic) CacheStoreSecondLevelTarget secondLevelTarget;
@@ -38,6 +36,7 @@ typedef NS_ENUM(NSUInteger, CacheStoreSecondLevelTarget) {
 @property(nonatomic) NSTimeInterval defaultTimeToLife;
 @property(nonatomic, readonly, getter = isPersisting) BOOL persisting;
 @property(nonatomic, readonly) NSUInteger firstLevelCount, secondLevelCount;
+
 
 - (id)initWithName:(NSString *)name;
 
@@ -54,12 +53,15 @@ typedef NS_ENUM(NSUInteger, CacheStoreSecondLevelTarget) {
 
 + (void)clearAllCachedFiles;
 
-/// @Description return the stored cached files from the second level cache
+/// @Description: return the stored cached files from the second level cache
 - (NSArray *)secondLevelFiles; 
 
 - (id)objectForKey:(id)key;
 - (void)removeObjectForKey:(id)key;
-- (void)setObject:(id)object forKey:(id <NSCopying>)key;
+- (void)setObject:(id)object forKey:(id <NSCopying>)key;    // uses default ttl
 - (void)setObject:(id)object forKey:(id <NSCopying>)key withTimeToLife:(NSTimeInterval)ttl;
+
+/// @Description: stores all first level entries to second level
+- (void)persist;
 
 @end

@@ -2,6 +2,13 @@ CacheStore is a managed two level caching system.
 
 You can choose from different caching strategies and define limits on the first and second level cache.
 
-first level: in memory cache (internally using a NSCache)
+first level: in memory cache, like NSMutableDictionary
 
-second level: disk store (using files in temp folder)
+second level: disk store (using files in temp folder or likewise NSUserDefaults)
+
+
+initialize cache:
+
+    CacheStore *cache = [[CacheStore alloc] initWithName:@"MyCache" firstLevelLimit:100 secondLevelLimit:1000 defaultTimeToLife:3600];
+    cache.persistStrategy = CacheStorePersistStrategyOnFirstLevelInsertAndClean;
+

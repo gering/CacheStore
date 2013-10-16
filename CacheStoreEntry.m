@@ -19,8 +19,20 @@ static NSString * const kNSCodingKeyTimeToLife = @"timeToLife";
 static NSString * const kNSCodingKeyAdded = @"added";
 static NSString * const kNSCodingKeyLastAccess = @"lastAccess";
 
+@interface CacheStoreEntry()
+
+@property(nonatomic, strong) id key;
+@property(nonatomic, strong) id value;
+
+@property(nonatomic) NSTimeInterval timeToLife;
+@property(nonatomic, strong) NSDate *added, *lastAccess;
+@property(nonatomic) NSUInteger accessCount;
+
+@end
+
 
 @implementation CacheStoreEntry
+
 
 - (id)initWithKey:(id)key value:(id)value timeToLife:(NSTimeInterval)ttl {
     if ((self = [super init])) {
@@ -57,16 +69,30 @@ static NSString * const kNSCodingKeyLastAccess = @"lastAccess";
     [encoder encodeObject:self.lastAccess forKey:kNSCodingKeyLastAccess];
 }
 
-- (NSTimeInterval)passed {
+- (id)value {
+    if (self.accessCount < NSUIntegerMax) self.accessCount++;
+    self.lastAccess = [NSDate date];
+    return _value;
+}
+
+- (NSTimeInterval)timeSinceAdded {
     return [[NSDate date] timeIntervalSinceDate:self.added];
 }
 
-- (NSTimeInterval)rest {
-    return self.timeToLife - self.passed;
+- (NSTimeInterval)remainingTimeToLife {
+    return self.timeToLife - self.timeSinceAdded;
 }
 
 - (BOOL)isValid {
-    return self.rest > 0;
+    return self.remainingTimeToLife > 0;
+}
+
+- (NSUInteger)accessCount {
+    return _accessCount;
+}
+
+- (NSTimeInterval)timeSinceLastAccess {
+    return [[NSDate date] timeIntervalSinceDate:self.lastAccess];
 }
 
 @end
