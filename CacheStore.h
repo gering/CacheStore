@@ -32,7 +32,7 @@ typedef NS_ENUM(NSUInteger, CacheStoreSecondLevelTarget) {
  a second level (on disk) cache.
  You can configure this cache store to use your desired cleanup strategy if memory runs
  low or limits are reached.
- Each object in the CacheStore gets an time to life (ttl) assigned, that will invalidate
+ Each object in the CacheStore gets a time to life (ttl) assigned, that will invalidate
  cached entries after the ttl has passed. You can define a default ttl.
  Big objects can be put into second level cache automatically.
  */
