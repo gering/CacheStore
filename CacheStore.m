@@ -13,7 +13,15 @@
 #error This file must be compiled with ARC. Use -fobjc-arc flag (or convert project to ARC).
 #endif
 
-static NSString * const kCacheFileSuffix = @"cacheobj";
+static NSString *const kCacheFileSuffix = @"cacheobj";
+
+static NSUInteger const kDefaultFirstLevelLimit = 100;                  // 100 entries
+static NSUInteger const kDefaultSecondLevelLimit = 1000;                // 1000 entries
+static NSUInteger const kDefaultTimeToLife = 24 * 60 * 60;              // 1 day ttl
+static NSUInteger const kDefaultFistLevelEntrySizeLimit = 10 * 1024;    // 10 KB
+static CacheStoreCleanupStrategy const kDefaultCleanupStrategy = CacheStoreCleanupStrategyLastAccessed;
+static CacheStorePersistStrategy const kDefaultPersistStrategy = CacheStorePersistStrategyOnFirstLevelClean;
+static CacheStoreSecondLevelTarget const kDefaultSecondLevelTarget = CacheStoreSecondLevelTargetCacheFolder;
 
 
 @interface CacheStore() 
@@ -25,9 +33,6 @@ static NSString * const kCacheFileSuffix = @"cacheobj";
 
 @implementation CacheStore
 
-@dynamic persisting;
-@dynamic firstLevelCount, secondLevelCount;
-
 
 #pragma mark - init
 
@@ -36,17 +41,22 @@ static NSString * const kCacheFileSuffix = @"cacheobj";
 }
 
 - (id)initWithName:(NSString *)name {
-    return [self initWithName:name firstLevelLimit:100 secondLevelLimit:1000 defaultTimeToLife:24 * 60 * 60];   // 1 day ttl
+    return [self initWithName:name firstLevelLimit:kDefaultFirstLevelLimit secondLevelLimit:kDefaultSecondLevelLimit defaultTimeToLife:kDefaultTimeToLife];
+}
+
+- (id)initWithName:(NSString *)name firstLevelLimit:(NSUInteger)firstLevelLimit firstLevelEntrySizeLimit:(NSUInteger)firstLevelEntrySizeLimit defaultTimeToLife:(NSTimeInterval)ttl {
+    return [self initWithName:name firstLevelLimit:firstLevelLimit firstLevelEntrySizeLimit:firstLevelEntrySizeLimit secondLevelLimit:kDefaultSecondLevelLimit defaultTimeToLife:ttl cleanupStrategy:kDefaultCleanupStrategy persistStrategy:kDefaultPersistStrategy secondLevelTarget:kDefaultSecondLevelTarget];
 }
 
 - (id)initWithName:(NSString *)name firstLevelLimit:(NSUInteger)firstLevelLimit secondLevelLimit:(NSUInteger)secondLevelLimit defaultTimeToLife:(NSTimeInterval)ttl {
-    return [self initWithName:name firstLevelLimit:firstLevelLimit secondLevelLimit:secondLevelLimit defaultTimeToLife:ttl cleanupStrategy:CacheStoreCleanupStrategyLastAccessed persistStrategy:CacheStorePersistStrategyOnFirstLevelClean secondLevelTarget:CacheStoreSecondLevelTargetCacheFolder];
+    return [self initWithName:name firstLevelLimit:firstLevelLimit firstLevelEntrySizeLimit:kDefaultFistLevelEntrySizeLimit secondLevelLimit:secondLevelLimit defaultTimeToLife:ttl cleanupStrategy:kDefaultCleanupStrategy persistStrategy:kDefaultPersistStrategy secondLevelTarget:kDefaultSecondLevelTarget];
 }
 
-- (id)initWithName:(NSString *)name firstLevelLimit:(NSUInteger)firstLevelLimit secondLevelLimit:(NSUInteger)secondLevelLimit defaultTimeToLife:(NSTimeInterval)ttl cleanupStrategy:(CacheStoreCleanupStrategy)cleanupStrategy persistStrategy:(CacheStorePersistStrategy)persistStrategy secondLevelTarget:(CacheStoreSecondLevelTarget)secondLevelTarget {
+- (id)initWithName:(NSString *)name firstLevelLimit:(NSUInteger)firstLevelLimit firstLevelEntrySizeLimit:(NSUInteger)firstLevelEntrySizeLimit secondLevelLimit:(NSUInteger)secondLevelLimit defaultTimeToLife:(NSTimeInterval)ttl cleanupStrategy:(CacheStoreCleanupStrategy)cleanupStrategy persistStrategy:(CacheStorePersistStrategy)persistStrategy secondLevelTarget:(CacheStoreSecondLevelTarget)secondLevelTarget {
     if ((self = [super init])) {
         _name = name;
         self.firstLevelLimit = firstLevelLimit;
+        self.firstLevelEntrySizeLimit = firstLevelEntrySizeLimit;
         self.secondLevelLimit = secondLevelLimit;
         self.defaultTimeToLife = ttl;
         self.cleanupStrategy = cleanupStrategy;
@@ -68,10 +78,6 @@ static NSString * const kCacheFileSuffix = @"cacheobj";
 }
 
 # pragma mark -
-
-- (BOOL)isPersisting {
-    return self.secondLevelLimit > 0;
-}
 
 - (NSUInteger)firstLevelCount {
     return self.cache.count;
@@ -213,20 +219,24 @@ static NSString * const kCacheFileSuffix = @"cacheobj";
 
 - (void)putEntryToSecondLevel:(CacheStoreEntry *)entry {
     if (self.isPersisting && entry.isValid) {
-        switch (self.secondLevelTarget) {
-            case CacheStoreSecondLevelTargetCacheFolder:
-            {
-                NSString *file = [self fileForKey:entry.key];
-                //NSLog(@"CacheStore INFO: persisting cache entry to file %@", file);
-                [NSKeyedArchiver archiveRootObject:entry toFile:file];
-                break;
+        if ([entry valueConformsToNSCoding]) {
+            switch (self.secondLevelTarget) {
+                case CacheStoreSecondLevelTargetCacheFolder:
+                {
+                    NSString *file = [self fileForKey:entry.key];
+                    //NSLog(@"CacheStore INFO: persisting cache entry to file %@", file);
+                    [NSKeyedArchiver archiveRootObject:entry toFile:file];
+                    break;
+                }
+                case CacheStoreSecondLevelTargetUserDefaults:
+                    NSLog(@"CacheStore WARNING: CacheStoreSecondLevelTargetUserDefaults not supported yet");
+                    break;
+                default:
+                    NSLog(@"CacheStore WARNING: unsupported second level target");
+                    break;
             }
-            case CacheStoreSecondLevelTargetUserDefaults:
-                NSLog(@"CacheStore WARNING: CacheStoreSecondLevelTargetUserDefaults not supported yet");
-                break;
-            default:
-                NSLog(@"CacheStore WARNING: unsupported second level target");
-                break;
+        } else {
+            NSLog(@"CacheStore WARNING: %@ does not conform to NSCoding protocol and can't be stored into second level cache", [entry.value class]);
         }
     }
 }
@@ -237,6 +247,10 @@ static NSString * const kCacheFileSuffix = @"cacheobj";
             [self putEntryToSecondLevel:entry];
         }
     }
+}
+
+- (BOOL)isPersisting {
+    return self.secondLevelLimit > 0;
 }
 
 - (void)persist {
@@ -275,16 +289,23 @@ static NSString * const kCacheFileSuffix = @"cacheobj";
 - (void)setObject:(id)object forKey:(id <NSCopying>)key withTimeToLife:(NSTimeInterval)ttl {
     if (object && key) {
         CacheStoreEntry *entry = [[CacheStoreEntry alloc] initWithKey:key value:object timeToLife:ttl];
+
+        NSUInteger size = entry.valueSize;
+        BOOL tooBig = size > self.firstLevelEntrySizeLimit;
         
         // first level
-        [self putEntryToFirstLevel:entry];
+        if (!tooBig) {
+            [self putEntryToFirstLevel:entry];
+        } else {
+            NSLog(@"CacheStore INFO: skipping first level, entry too big: %i bytes", size);
+        }
         
         if (self.firstLevelCount > self.firstLevelLimit) {
             [self cleanupFirstLevel:self.firstLevelCount - self.firstLevelLimit];
         }
         
         // second level
-        if (self.persistStrategy == CacheStorePersistStrategyOnFirstLevelInsertAndClean) {
+        if (tooBig || self.persistStrategy == CacheStorePersistStrategyOnFirstLevelInsertAndClean) {
             [self putEntryToSecondLevel:entry];
         }
     }
@@ -311,19 +332,18 @@ static NSString * const kCacheFileSuffix = @"cacheobj";
 }
 
 - (NSUInteger)cleanupFirstLevel {
-    return [self cleanupFirstLevel:self.firstLevelLimit];
+    NSUInteger count = self.firstLevelCount;
+    [self persist];
+    [self clearFistLevelCache];
+    return count;
 }
 
 - (NSUInteger)cleanupFirstLevel:(NSUInteger)count {
-    if (count > self.firstLevelCount) count = self.firstLevelCount;
-
     // cleanup all?
-    if (count == self.firstLevelCount) {
-        [self persist];
-        [self clearFistLevelCache];
-        return count;
+    if (count >= self.firstLevelCount)  {
+        return [self cleanupFirstLevel];
     }
-    
+
     NSArray *keys = self.cache.allKeys;
 
     int removedCount = 0;

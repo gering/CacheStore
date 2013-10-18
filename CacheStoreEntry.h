@@ -15,6 +15,8 @@
 
 - (id)key;
 - (id)value;
+- (BOOL)valueConformsToNSCoding;
+- (NSUInteger)valueSize;
 - (NSTimeInterval)timeSinceAdded;
 - (NSTimeInterval)remainingTimeToLife;
 - (BOOL)isValid;

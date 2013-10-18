@@ -8,16 +8,17 @@
 
 #import "CacheStoreEntry.h"
 #import "CacheableUIImage.h"
+#import <malloc/malloc.h>
 
 #if ! __has_feature(objc_arc)
 #error This file must be compiled with ARC. Use -fobjc-arc flag (or convert project to ARC).
 #endif
 
-static NSString * const kNSCodingKeyKey = @"key";
-static NSString * const kNSCodingKeyValue = @"value";
-static NSString * const kNSCodingKeyTimeToLife = @"timeToLife";
-static NSString * const kNSCodingKeyAdded = @"added";
-static NSString * const kNSCodingKeyLastAccess = @"lastAccess";
+static NSString *const kNSCodingKeyKey = @"key";
+static NSString *const kNSCodingKeyValue = @"value";
+static NSString *const kNSCodingKeyTimeToLife = @"timeToLife";
+static NSString *const kNSCodingKeyAdded = @"added";
+static NSString *const kNSCodingKeyLastAccess = @"lastAccess";
 
 @interface CacheStoreEntry()
 
@@ -37,9 +38,11 @@ static NSString * const kNSCodingKeyLastAccess = @"lastAccess";
 - (id)initWithKey:(id)key value:(id)value timeToLife:(NSTimeInterval)ttl {
     if ((self = [super init])) {
 
-        // swap object with CacheableUIImage?
-        if ([value isKindOfClass:[UIImage class]]) {
-            value = [[CacheableUIImage alloc] initWithData:UIImagePNGRepresentation(value)];
+        if (![[value class] conformsToProtocol:@protocol(NSCoding)]) {
+            // swap object with CacheableUIImage?
+            if ([value isKindOfClass:[UIImage class]]) {
+                value = [[CacheableUIImage alloc] initWithData:UIImagePNGRepresentation(value)];
+            }
         }
         
         self.key = key;
@@ -73,6 +76,27 @@ static NSString * const kNSCodingKeyLastAccess = @"lastAccess";
     if (self.accessCount < NSUIntegerMax) self.accessCount++;
     self.lastAccess = [NSDate date];
     return _value;
+}
+
+- (BOOL)valueConformsToNSCoding {
+    return ([[self.value class] conformsToProtocol:@protocol(NSCoding)]);
+}
+
+- (NSData *)encodeValue {
+    if ([self valueConformsToNSCoding]) {
+        return [NSKeyedArchiver archivedDataWithRootObject:self.value];
+    } else {
+        return nil;
+    }
+}
+
+- (NSUInteger)valueSize {
+    NSData *data = [self encodeValue];
+    if (data) {
+        return data.length;
+    } else {
+        return malloc_size(&_value);
+    }
 }
 
 - (NSTimeInterval)timeSinceAdded {
