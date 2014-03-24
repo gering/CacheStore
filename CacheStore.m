@@ -90,7 +90,7 @@ static CacheStoreSecondLevelTarget const kDefaultSecondLevelTarget = CacheStoreS
 # pragma mark -
 
 - (NSString *)fileForKey:(id)key {
-    return [NSString stringWithFormat:@"%@/%@_%02x.%@", [CacheStore cacheDirectory], [self name], [key hash], kCacheFileSuffix];
+    return [NSString stringWithFormat:@"%@/%@_%02lx.%@", [CacheStore cacheDirectory], [self name], (unsigned long)[key hash], kCacheFileSuffix];
 }
 
 + (NSArray *)allCachedFiles {
@@ -123,7 +123,7 @@ static CacheStoreSecondLevelTarget const kDefaultSecondLevelTarget = CacheStoreS
 }
 
 + (void)clearFiles:(NSArray *)files {
-    NSLog(@"CacheStore INFO: clearing %i second level files", files.count);
+    NSLog(@"CacheStore INFO: clearing %lu second level files", (unsigned long)files.count);
     for (NSString *item in files) {
         //NSLog(@"CacheStore INFO: deleting %@", item);
         NSError *error = nil;
@@ -297,7 +297,7 @@ static CacheStoreSecondLevelTarget const kDefaultSecondLevelTarget = CacheStoreS
         if (!tooBig) {
             [self putEntryToFirstLevel:entry];
         } else {
-            NSLog(@"CacheStore INFO: skipping first level, entry too big: %i bytes", size);
+            NSLog(@"CacheStore INFO: skipping first level, entry too big: %lu bytes", (unsigned long)size);
         }
         
         if (self.firstLevelCount > self.firstLevelLimit) {
@@ -326,7 +326,7 @@ static CacheStoreSecondLevelTarget const kDefaultSecondLevelTarget = CacheStoreS
         case CacheStoreCleanupStrategyLastAdded:
             return [[NSSortDescriptor alloc] initWithKey:NSStringFromSelector(@selector(timeSinceAdded)) ascending:NO];
         default:
-            NSLog(@"CacheStore WARNING: unsupported cleanup strategy %i", self.cleanupStrategy);
+            NSLog(@"CacheStore WARNING: unsupported cleanup strategy %lu", self.cleanupStrategy);
             return nil;
     }
 }
@@ -346,7 +346,7 @@ static CacheStoreSecondLevelTarget const kDefaultSecondLevelTarget = CacheStoreS
 
     NSArray *keys = self.cache.allKeys;
 
-    int removedCount = 0;
+    NSUInteger removedCount = 0;
     for (id key in keys) {
         CacheStoreEntry *entry = [self entryFromFirstLevelWithKey:key];
         if (!entry.isValid) {
@@ -357,7 +357,7 @@ static CacheStoreSecondLevelTarget const kDefaultSecondLevelTarget = CacheStoreS
     
     keys = self.cache.allKeys;
 
-    int remaining = count - removedCount;
+    NSInteger remaining = count - removedCount;
     if (remaining > 0) {
         NSSortDescriptor *sortDescriptor = [self sortDescriptorForCleanupStrategy:self.cleanupStrategy];
         NSArray *sorted = [self.cache.allValues sortedArrayUsingDescriptors:@[sortDescriptor]];
@@ -371,7 +371,7 @@ static CacheStoreSecondLevelTarget const kDefaultSecondLevelTarget = CacheStoreS
         removedCount += waste.count;
     }
     
-    NSLog(@"CacheStore INFO: cleaned %i frist level entries", removedCount);
+    NSLog(@"CacheStore INFO: cleaned %lu frist level entries", (unsigned long)removedCount);
     return removedCount;
 }
 
